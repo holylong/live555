@@ -2,8 +2,14 @@ cmake_minimum_required(VERSION 3.0)
 
 project(live555 VERSION 2023.04.12 LANGUAGES C CXX)
 
+
 option(ENABLE_WEBCAM "Enable WebCam RTSP Server" ON)
 option(ENABLE_PLAYER "Enable RTSP Player" OFF)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/UsageEnvironment/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/liveMedia/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/BasicUsageEnvironment/include)
+
 
 add_subdirectory(BasicUsageEnvironment)
 add_subdirectory(groupsock)
