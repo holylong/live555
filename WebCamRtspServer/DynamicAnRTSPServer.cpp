@@ -47,38 +47,47 @@ static ServerMediaSession* createNewSMS(UsageEnvironment& env,
 
 ServerMediaSession* DynamicAnRTSPServer
 ::lookupServerMediaSession(char const* streamName, Boolean isFirstLookupInSession) {
-  // First, check whether the specified "streamName" exists as a local file:
-  FILE* fid = fopen(streamName, "rb");
-  Boolean fileExists = fid != NULL;
+  // 支持任意以".webcam"结尾的流名称
+  if( strstr(streamName, "demo.webcam") != NULL){
+    // First, check whether the specified "streamName" exists as a local file:
+    FILE* fid = fopen(streamName, "rb");
+    Boolean fileExists = fid != NULL;
 
-  // Next, check whether we already have a "ServerMediaSession" for this file:
-  ServerMediaSession* sms = RTSPServer::lookupServerMediaSession(streamName);
-  Boolean smsExists = sms != NULL;
+    // Next, check whether we already have a "ServerMediaSession" for this file:
+    ServerMediaSession* sms = RTSPServer::lookupServerMediaSession(streamName);
+    Boolean smsExists = sms != NULL;
 
-  // Handle the four possibilities for "fileExists" and "smsExists":
-  if (!fileExists) {
-    if (smsExists) {
-      // "sms" was created for a file that no longer exists. Remove it:
-      removeServerMediaSession(sms);
-      sms = NULL;
+    // Handle the four possibilities for "fileExists" and "smsExists":
+    if (!fileExists) {
+      printf("Stream '%s' does not exist.\n", streamName);
+      if (smsExists) {
+        // "sms" was created for a file that no longer exists. Remove it:
+        removeServerMediaSession(sms);
+        sms = NULL;
+      }
+
+      return NULL;
+    } else {
+      printf("Stream '%s' exists.\n", streamName);
+      if (smsExists && isFirstLookupInSession) { 
+        // Remove the existing "ServerMediaSession" and create a new one, in case the underlying
+        // file has changed in some way:
+        removeServerMediaSession(sms); 
+        sms = NULL;
+      } 
+
+      if (sms == NULL) {
+        sms = createNewSMS(envir(), streamName, fid); 
+        addServerMediaSession(sms);
+      }
+
+      fclose(fid);
+      return sms;
     }
-
+  }else{
+    // 拒绝无效流请求
+    envir() << "Invalid stream name: " << streamName << "\n";
     return NULL;
-  } else {
-    if (smsExists && isFirstLookupInSession) { 
-      // Remove the existing "ServerMediaSession" and create a new one, in case the underlying
-      // file has changed in some way:
-      removeServerMediaSession(sms); 
-      sms = NULL;
-    } 
-
-    if (sms == NULL) {
-      sms = createNewSMS(envir(), streamName, fid); 
-      addServerMediaSession(sms);
-    }
-
-    fclose(fid);
-    return sms;
   }
 }
 

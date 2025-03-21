@@ -1,6 +1,7 @@
 #include "FramedSource.hh"
 
-#include <opencv2/opencv.hpp>
+// 使用相对路径包含方式避免绝对路径依赖
+#include "opencv2/opencv.hpp"
 
 #ifdef _WIN32
 // Windows 实现
@@ -29,13 +30,30 @@ public:
 
 protected:
     CameraFramedSource(UsageEnvironment& env)
-        : FramedSource(env), cap(0) {
-        printf("CameraFramedSource::CameraFramedSource\n");
-        // 打开摄像头
-        if (!cap.isOpened()) {
-            env << "Error: Could not open camera.\n";
+        : FramedSource(env), cap(0) {  // 尝试打开默认摄像头设备
+        printf("[Camera] Trying to open video capture device...\n");
+        
+        // 增加多平台设备号处理
+        #ifdef _WIN32
+        int device_id = 0; // Windows通常使用0作为默认摄像头
+        #else 
+        int device_id = -1; // Linux可能需要使用V4L2路径
+        #endif
+        
+        if (!cap.open(device_id)) {
+            env << "ERROR: Failed to open video capture device!\n";
+            env << "Possible reasons:\n";
+            env << "1. Camera not connected\n";
+            env << "2. No permission to access camera\n";
+            env << "3. Invalid device ID (" << device_id << ")\n";
+            handleClosure();
+            return;
         }
-        printf("CameraFramedSource::CameraFramedSource exit\n");
+        
+        // 检查摄像头参数是否有效
+        int width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+        int height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+        printf("[Camera] Opened successfully. Resolution: %dx%d\n", width, height);
     }
 
     virtual ~CameraFramedSource() {
@@ -87,5 +105,5 @@ private:
         }
     }
 #endif
-    cv::VideoCapture cap;
+    cv::VideoCapture cap;  // 需要确保OpenCV库正确链接
 };
